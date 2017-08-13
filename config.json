@@ -1,0 +1,4 @@
+{
+    "port": 4243,
+    "password": "./password.txt"
+}
