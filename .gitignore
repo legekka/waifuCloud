@@ -1,1 +1,3 @@
 password.txt
+db.json
+node_modules/websocket/build/Release/obj/bufferutil/*

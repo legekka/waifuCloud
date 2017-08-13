@@ -4,10 +4,13 @@
 var fs = require('fs');
 var http = require('http');
 var WebSocketServer = require('websocket').server;
+var reqreload = require('./module/reqreload.js');
 
 var config = JSON.parse(fs.readFileSync('./config.json').toString());
 
-
+console.log('Loading database...');
+var db = JSON.parse(fs.readFileSync(config.databasepath).toString());
+console.log('Loading complete!');
 
 
 var server = http.createServer(function (request, response) {
@@ -35,7 +38,9 @@ server.on('request', function (request) {
     console.log(`${require('./modules/getTime.js')} ${username} connected (ConnectionID: ${connection.id})`);
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
-            // itt lesz majd a kérés feldolgozása
+            console.log(`${require('./modules/getTime.js')} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
+            var msg = JSON.parse(message.utf8Data.toString().trim());
+            reqreload('./commands.js').command(connection, db, msg);
         }
     });
 
