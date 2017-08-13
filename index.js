@@ -39,8 +39,8 @@ server.on('request', function (request) {
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
             console.log(`${require('./module/getTime.js')} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
-            var msg = JSON.parse(message.utf8Data.toString().trim());
-            reqreload('./commands.js').command(connection, db, msg);
+            var cmd = JSON.parse(message.utf8Data.toString().trim());
+            reqreload('./commands.js').command(connection, db, cmd);
         }
     });
 
