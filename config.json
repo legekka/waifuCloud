@@ -1,4 +1,5 @@
 {
     "port": 4243,
-    "password": "./password.txt"
+    "password": "./password.txt",
+    "databasepath": "./db.json"
 }
