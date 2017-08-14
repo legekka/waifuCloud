@@ -16,9 +16,8 @@ module.exports = {
             }
             break;
             case 'add_post': {
-                var postreq = JSON.parse(cmd.post);
                 console.log(cmd.post);
-                var errormsg = isValidPost(postreq, db);
+                var errormsg = isValidPost(cmd.post, db);
                 if (errormsg != 'no error') {
                     var resp = {
                         "job_id": cmd.job_id,
