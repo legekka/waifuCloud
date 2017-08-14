@@ -128,6 +128,7 @@ function dbStatus(db, callback) {
                 'post_count': db.length,
                 'filepath_count': filepath_count,
                 'size': mbtext + ' MB',
+                'dbsize': (fs.statSync(config.databasepath).size / 1024 / 1024).toFixed(2) + ' MB',
                 'uptime': format(process.uptime())
             }
             return callback(stat);
