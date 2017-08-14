@@ -1,5 +1,6 @@
 // command.js
 // incoming command parsing
+var fs = require('fs');
 
 module.exports = {
     command: (connection, db, cmd) => {
@@ -12,7 +13,9 @@ module.exports = {
                 }
                 connection.sendUTF(JSON.stringify(resp));
             }
+            break;
             case 'add_post': {
+                console.log(cmd.post);
                 var errormsg = isValidPost(cmd.post, db);
                 if (errormsg != 'no error') {
                     var resp = {
@@ -31,6 +34,7 @@ module.exports = {
                     });
                 }
             }
+            break;
             case 'save': {
                 fs.writeFileSync(config.databasepath, JSON.stringify(db));
                 var resp = {
@@ -39,6 +43,7 @@ module.exports = {
                     "response": "Database saved."
                 }
             }
+            break;
         }
     }
 }
@@ -51,7 +56,7 @@ function isValidPost(postreq, db) {
             if (i >= db.length) { return "no error" }
             else { return "Error: Filename already exists" }
         } else { return "Error: No filename" }
-    } else { return "Error: Invalid URL/Tags structure" }
+    } else { return "Error: Invalid url/tags structure" }
 }
 
 function addPost(postreq, db, callback) {
