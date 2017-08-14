@@ -47,6 +47,15 @@ module.exports = {
                 connection.sendUTF(JSON.stringify(resp));
             }
             break;
+            case 'searchfilepaths': {
+                if (cmd.mode == 'all') {
+
+                } else if (cmd.mode == 'one_file') {
+                    // később
+                }
+                
+                break;
+            }
         }
     }
 }
