@@ -139,7 +139,9 @@ function dbStatus(db, callback) {
 function randomPost(tags, db) {
     var results = searchTags(tags, db);
     if (results.length > 0) {
-        return results[Math.round(Math.random() * results.length) - 1];
+        if (results.length > 1) {
+            return results[Math.round(Math.random() * results.length) - 1];
+        } else { return results[0]; }
     } else {
         return "no post";
     }
