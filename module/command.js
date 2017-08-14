@@ -1,6 +1,7 @@
 // command.js
 // incoming command parsing
 var fs = require('fs');
+var config = JSON.parse(fs.readFileSync('./config.json').toString());
 
 module.exports = {
     command: (connection, db, cmd) => {
@@ -17,7 +18,7 @@ module.exports = {
             case 'add_post': {
                 var postreq = JSON.parse(cmd.post);
                 console.log(postreq);
-                var errormsg = isValidPost(cmd.post, db);
+                var errormsg = isValidPost(postreq, db);
                 if (errormsg != 'no error') {
                     var resp = {
                         "job_id": cmd.job_id,
