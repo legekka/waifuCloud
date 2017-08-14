@@ -32,6 +32,7 @@ module.exports = {
                             "error": false,
                             "response": "Successfully added."
                         }
+                        connection.sendUTF(JSON.stringify(resp));
                     });
                 }
             }
@@ -43,6 +44,7 @@ module.exports = {
                     "error": false,
                     "response": "Database saved."
                 }
+                connection.sendUTF(JSON.stringify(resp));
             }
             break;
         }
