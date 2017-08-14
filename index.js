@@ -46,7 +46,7 @@ wsServer.on('request', function (request) {
         if (message.type === 'utf8') {
             console.log(`${require('./module/getTime.js')('full')} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
             var cmd = JSON.parse(message.utf8Data.toString().trim());
-            reqreload('./module/commands.js').command(connection, db, cmd);
+            reqreload('./command.js').command(connection, db, cmd);
         }
     });
 
