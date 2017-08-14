@@ -24,6 +24,7 @@ server.listen(config.port, function () {
 var connections = [];
 
 server.on('request', function (request) {
+    console.log('request...');
     var username = JSON.parse(request.origin).username;
     if (JSON.parse(request.origin).password != fs.readFileSync(config.password).toString().trim()) {
         conn.sendUTF('Wrong password.');
