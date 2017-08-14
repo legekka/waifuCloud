@@ -21,12 +21,18 @@ server.listen(config.port, function () {
     console.log('WS server is listening on port: ' + config.port);
 });
 
+wsServer = new WebSocketServer({
+    httpServer: server,
+    autoAcceptConnections: false
+});
+
 var connections = [];
 
-server.on('request', function (request) {
+WSserver.on('request', function (request) {
     console.log('request...');
     var username = JSON.parse(request.origin).username;
     if (JSON.parse(request.origin).password != fs.readFileSync(config.password).toString().trim()) {
+        var conn = request.accept('echo-protocol', request.origin);
         conn.sendUTF('Wrong password.');
         conn.close();
         return;
