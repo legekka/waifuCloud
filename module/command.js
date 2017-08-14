@@ -2,6 +2,8 @@
 // incoming command parsing
 var fs = require('fs');
 var config = JSON.parse(fs.readFileSync('./config.json').toString());
+var exec = require('child_process').exec;
+var getSize = require('get-folder-size');
 
 module.exports = {
     command: (connection, db, cmd) => {
@@ -47,7 +49,7 @@ module.exports = {
                 connection.sendUTF(JSON.stringify(resp));
             }
                 break;
-            case 'searchfilepaths': {
+            case 'search_filepath': {
                 if (cmd.mode == 'all') {
                     var result = findAllMissingPath(db);
                     if (result == "no error") {
@@ -71,8 +73,102 @@ module.exports = {
 
                 break;
             }
+            case 'search_tags': {
+                if (cmd.mode == "random") {
+                    var result = randomPost(cmd.tags, db);
+                    var resp = {
+                        "job_id": cmd.job_id,
+                        "name": 'post',
+                        "error": result == "no post",
+                        "response": result
+                    }
+                    connection.sendUTF(JSON.stringify(resp));
+                }
+                break;
+            }
+            case 'stats': {
+                dbStatus(db, (response) => {
+                    var resp = {
+                        'job_id': cmd.job_id,
+                        'name': 'stats',
+                        'response': response
+                    }
+                    connection.sendUTF(JSON.stringify(resp));
+                });
+                break;
+            }
         }
     }
+}
+
+function ver(callback) {
+    lastcomm = exec('git log -n 1');
+    lastcomm.stdout.on('data', (data) => {
+        var title = data.toString().split('\n')[4].trim();
+        return callback(title);
+    });
+}
+
+function dbStatus(db, callback) {
+    var filepath_count = 0;
+    getSize(config.imagepath, (err, size) => {
+        if (err) { throw err; }
+        var mb = size / 1024 / 1024;
+        var mbtext = mb.toFixed(2);
+        for (i in db) {
+            if (db[i].filepath != '') {
+                filepath_count++;
+            }
+        }
+        ver((version) => {
+            var stat = {
+                'name': 'WaifuCloud',
+                'version': version,
+                'git': 'http://github.com/legekka/waifuCloud',
+                'post_count': db.length,
+                'filepath_count': filepath_count,
+                'size': mbtext + ' MB',
+                'uptime': format(process.uptime())
+            }
+            return callback(stat);
+        });
+    });
+}
+
+function randomPost(tags, db) {
+    var results = searchTags(tags, db);
+    if (results.length > 0) {
+        return results[Math.round(Math.random() * results.length) - 1];
+    } else {
+        return "no post";
+    }
+}
+
+function searchTags(tags, db) {
+    var results = [];
+    console.log(tags);
+    for (i in db) {
+        if (db[i].filepath != '') {
+            var j = 0;
+            var count = 0;
+            while (j < tags.length && count != tags.length) {
+                var k = 0;
+                while (k < db[i].tags.length && tags[j] !== db[i].tags[k]) {
+                    k++;
+                }
+                if (k < db[i].tags.length) {
+                    count++;
+                    j++;
+                } else {
+                    j = tags.length;
+                }
+            }
+            if (count == tags.length) {
+                results.push(db[i]);
+            }
+        }
+    }
+    return results;
 }
 
 function isValidPost(postreq, db) {
@@ -142,4 +238,15 @@ function fileLocation(filename) {
     while (i < imagelist.length && imagelist[i].split('/')[imagelist[i].split('/').length - 1].indexOf(filename) < 0) { i++ }
     if (i < imagelist.length) { return imagelist[i]; }
     else { return "error"; }
+}
+
+function format(seconds) {
+    function pad(s) {
+        return (s < 10 ? '0' : '') + s;
+    }
+    var hours = Math.floor(seconds / (60 * 60));
+    var minutes = Math.floor(seconds % (60 * 60) / 60);
+    var seconds = Math.floor(seconds % 60);
+
+    return pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
 }
