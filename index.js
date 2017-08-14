@@ -10,6 +10,12 @@ var config = JSON.parse(fs.readFileSync('./config.json').toString());
 
 console.log('Loading database...');
 var db = JSON.parse(fs.readFileSync(config.databasepath).toString());
+var autosave = setInterval(() => {
+    console.log('Autosaving database...');
+    save();
+    console.log('Autosave complete!');
+}, 3600000);
+
 console.log('Loading complete!');
 
 
@@ -61,4 +67,8 @@ function generateID() {
     var i = 0;
     while (i < connections.length) { i++ };
     return i;
+}
+
+function save() {
+    fs.writeFileSync(config.databasepath, JSON.stringify(db));
 }
