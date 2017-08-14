@@ -1,5 +1,6 @@
 {
     "port": 4243,
     "password": "./password.txt",
-    "databasepath": "./db.json"
+    "databasepath": "./db.json",
+    "imagepath": "D:/waifucloud/images/"
 }
