@@ -9,7 +9,7 @@ module.exports = {
                     "job_id": cmd.job_id,
                     "response": db.length
                 }
-                connection.sendUTF8(JSON.stringify(resp));
+                connection.sendUTF(JSON.stringify(resp));
             }
         }
     }
