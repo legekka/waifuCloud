@@ -13,11 +13,12 @@ module.exports = {
                 connection.sendUTF(JSON.stringify(resp));
             }
             case 'add_post': {
-                if (!isValidPost(cmd.post, db)) {
+                var errormsg = isValidPost(cmd.post, db);
+                if (errormsg != 'no error') {
                     var resp = {
                         "job_id": cmd.job_id,
                         "error": true,
-                        "response": "Invalid Post!"
+                        "response": errormsg
                     }
                     connection.sendUTF(JSON.stringify(resp));
                 } else {
@@ -47,10 +48,10 @@ function isValidPost(postreq, db) {
         if (postreq.filename != undefined) {
             var i = 0;
             while (i < db.length && db[i].filename != postreq.filename) { i++ }
-            if (i >= db.length) { return true }
-            else { return false }
-        } else { return false }
-    } else { return false }
+            if (i >= db.length) { return "no error" }
+            else { return "Error: Filename already exists" }
+        } else { return "Error: No filename" }
+    } else { return "Error: Invalid URL/Tags structure" }
 }
 
 function addPost(postreq, db, callback) {
