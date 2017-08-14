@@ -29,7 +29,6 @@ wsServer = new WebSocketServer({
 var connections = [];
 
 wsServer.on('request', function (request) {
-    console.log('request...');
     var username = JSON.parse(request.origin).username;
     if (JSON.parse(request.origin).password != fs.readFileSync(config.password).toString().trim()) {
         var conn = request.accept('echo-protocol', request.origin);
@@ -45,7 +44,7 @@ wsServer.on('request', function (request) {
     console.log(`${require('./module/getTime.js')} ${username} connected (ConnectionID: ${connection.id})`);
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
-            console.log(`${require('./module/getTime.js')} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
+            console.log(`${require('./module/getTime.js').getTime()} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
             var cmd = JSON.parse(message.utf8Data.toString().trim());
             reqreload('./commands.js').command(connection, db, cmd);
         }
