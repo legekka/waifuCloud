@@ -28,7 +28,7 @@ wsServer = new WebSocketServer({
 
 var connections = [];
 
-WSserver.on('request', function (request) {
+wsServer.on('request', function (request) {
     console.log('request...');
     var username = JSON.parse(request.origin).username;
     if (JSON.parse(request.origin).password != fs.readFileSync(config.password).toString().trim()) {
