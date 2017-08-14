@@ -41,7 +41,7 @@ wsServer.on('request', function (request) {
     connection.username = username;
     connections.push(connection);
 
-    console.log(`${require('./module/getTime.js')} ${username} connected (ConnectionID: ${connection.id})`);
+    console.log(`${require('./module/getTime.js').getTime()} ${username} connected (ConnectionID: ${connection.id})`);
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
             console.log(`${require('./module/getTime.js').getTime()} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
@@ -51,7 +51,7 @@ wsServer.on('request', function (request) {
     });
 
     connection.on('close', function (reasonCode, description) {
-        console.log(`${require('./module/getTime.js')} ${connection.username} from ${connections.remoteAddress} disconnected.`);
+        console.log(`${require('./module/getTime.js').getTime()} ${connection.username} from ${connections.remoteAddress} disconnected.`);
         connections[connection.id] = 'disconnected';
     });
 
