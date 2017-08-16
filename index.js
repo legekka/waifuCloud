@@ -34,33 +34,62 @@ wsServer = new WebSocketServer({
 
 var connections = [];
 
-wsServer.on('request', function (request) {
-    var username = JSON.parse(request.origin).username;
-    if (JSON.parse(request.origin).password != fs.readFileSync(config.password).toString().trim()) {
-        var conn = request.accept('echo-protocol', request.origin);
-        conn.sendUTF('Wrong password.');
-        conn.close();
-        return;
-    }
-    var connection = request.accept('echo-protocol', request.origin);
+wsServer.on('request', request => {
+    var connection = request.accept("echo-protocol", request.origin);
+    connection.auth = false;
     connection.id = generateID();
-    connection.username = username;
-    connections.push(connection);
 
-    console.log(`${require('./module/getTime.js')('full')} ${username} connected (ConnectionID: ${connection.id})`);
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
-            console.log(`${require('./module/getTime.js')('full')} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
-            var cmd = JSON.parse(message.utf8Data.toString().trim());
-            reqreload('./command.js').command(connection, db, cmd);
+            var cmd;
+            try {
+                cmd = JSON.parse(message.utf8Data.toString().trim());
+            }
+            catch (excpt) {
+                connection.sendUTF("Wrong JSON.");
+            }
+            if (cmd.type == "auth") {
+                if (cmd.password != fs.readFileSync(config.password).toString().trim()) {
+                    connection.sendUTF('Wrong password.');
+                    connection.close();
+                    return;
+                }
+                connection.auth = true;
+                connection.username = cmd.username;
+                console.log(`${require('./module/getTime.js')('full')} ${cmd.username} connected (ConnectionID: ${connection.id})`);
+                connections.push(connection);
+            }
+            else if (connection.auth) {
+                console.log(`${require('./module/getTime.js')('full')} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
+                reqreload('./command.js').command(connection, db, cmd);
+            }
+            else {
+                connection.sendUTF("Request_JSON_Password");
+            }
         }
     });
 
     connection.on('close', function (reasonCode, description) {
-        console.log(`${require('./module/getTime.js')('full')} ${connection.username} from ${connections.remoteAddress} disconnected.`);
+        if (connection.auth)
+            console.log(`${require('./module/getTime.js')('full')} ${connection.username} from ${connections.remoteAddress} disconnected.`);
         connections[connection.id] = 'disconnected';
     });
-
+    var object;
+    try {
+        object = JSON.parse(request.origin);
+        if (object.password != fs.readFileSync(config.password).toString().trim()) {
+            connection.sendUTF('Wrong password.');
+            connection.close();
+            return;
+        }
+        connection.auth = true;
+        connection.username = object.username;
+        console.log(`${require('./module/getTime.js')('full')} ${connection.username} connected (ConnectionID: ${connection.id})`);
+        connections.push(connection);
+    }
+    catch (excpt) {
+        connection.sendUTF("Request_JSON_Password");
+    }
 });
 
 function generateID() {
