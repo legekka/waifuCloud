@@ -158,7 +158,7 @@ function searchTags(tags, db) {
             var count = 0;
             while (j < tags.length && count != tags.length) {
                 var k = 0;
-                while (k < db[i].tags.length && tags[j] !== db[i].tags[k]) {
+                while (k < db[i].tags.length && tags[j].toLowerCase() !== db[i].tags[k].toLowerCase()) {
                     k++;
                 }
                 if (k < db[i].tags.length) {
