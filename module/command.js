@@ -20,8 +20,9 @@ module.exports = {
             case 'add_post': {
                 console.log(cmd.post);
                 var errormsg = isValidPost(cmd.post, db);
+                var resp;
                 if (errormsg != 'no error') {
-                    var resp = {
+                    resp = {
                         "job_id": cmd.job_id,
                         "error": true,
                         "response": errormsg
@@ -29,7 +30,7 @@ module.exports = {
                     connection.sendUTF(JSON.stringify(resp));
                 } else {
                     addPost(cmd.post, db, () => {
-                        var resp = {
+                        resp = {
                             "job_id": cmd.job_id,
                             "error": false,
                             "response": "Successfully added."
@@ -37,6 +38,7 @@ module.exports = {
                         connection.sendUTF(JSON.stringify(resp));
                     });
                 }
+                console.log(resp);
             }
                 break;
             case 'save': {
@@ -188,10 +190,11 @@ function isValidPost(postreq, db) {
 function addPost(postreq, db, callback) {
     var post = {
         id: db.length,
-        url: postreq.url,
+        url: postreq.url, 
         tags: postreq.tags,
         filename: postreq.filename,
-        filepath: postreq.filepath != undefined ? postreq.filepath : ''
+        filepath: postreq.filepath != undefined ? postreq.filepath : '',
+        fileurl: postreq.filepath != undefined ? postreq.filepath.replace("d:/waifucloud/images","http://boltzmann.cf/images") : ''
     }
     db.push(post);
     return callback();
@@ -227,6 +230,7 @@ function findAllMissingPath(db) {
                 });
             } else {
                 db[i].filepath = filepath;
+                db[i].fileurl = filepath.replace("d:/waifucloud/images","http://boltzmann.cf/images");
             }
         }
     }
