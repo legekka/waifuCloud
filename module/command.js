@@ -115,8 +115,8 @@ function dbStatus(db, callback) {
     var filepath_count = 0;
     getSize(config.imagepath, (err, size) => {
         if (err) { throw err; }
-        var mb = size / 1024 / 1024;
-        var mbtext = mb.toFixed(2);
+        var gb = size / 1024 / 1024 / 1024;
+        var gbtext = gb.toFixed(2);
         for (i in db) {
             if (db[i].filepath != '') {
                 filepath_count++;
@@ -129,7 +129,7 @@ function dbStatus(db, callback) {
                 'git': 'http://github.com/legekka/waifuCloud',
                 'post_count': db.length,
                 'filepath_count': filepath_count,
-                'size': mbtext + ' MB',
+                'size': gbtext + ' GB',
                 'dbsize': (fs.statSync(config.databasepath).size / 1024 / 1024).toFixed(2) + ' MB',
                 'uptime': format(process.uptime())
             }
