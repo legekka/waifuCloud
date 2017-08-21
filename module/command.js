@@ -45,6 +45,7 @@ module.exports = {
                 break;
             case 'save': {
                 fs.writeFileSync(config.databasepath, JSON.stringify(db));
+                fs.writeFileSync('../db-backup/' + require('./getTime.js')('stamp') + ".json", JSON.stringify(db));
                 var resp = {
                     "job_id": cmd.job_id,
                     "error": false,
@@ -77,7 +78,7 @@ module.exports = {
                 }
                 return;
             }
-            break;
+                break;
             case 'search_tags': {
                 if (cmd.mode == "random") {
                     var result = randomPost(cmd.tags, db);
@@ -227,7 +228,7 @@ function findAllMissingPath(db) {
     buildImagePathDb((imagelist) => {
         for (i in db) {
             if (db[i].filepath == "") {
-                var filepath = fileLocation(db[i].filename);
+                var filepath = fileLocation(db[i].filename, imagelist);
                 if (filepath == 'error') {
                     errorlist.push({
                         "id": db[i].id,
@@ -247,7 +248,7 @@ function findAllMissingPath(db) {
 
 
 
-function fileLocation(filename) {
+function fileLocation(filename, imagelist) {
     var i = 0;
     while (i < imagelist.length && imagelist[i].split('/')[imagelist[i].split('/').length - 1].indexOf(filename) < 0) { i++ }
     if (i < imagelist.length) { return imagelist[i]; }

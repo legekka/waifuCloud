@@ -102,4 +102,5 @@ function generateID() {
 
 function save() {
     fs.writeFileSync(config.databasepath, JSON.stringify(db));
+    fs.writeFileSync('../db-backup/' + reqreload('./getTime.js')('stamp') + ".json", JSON.stringify(db));
 }
