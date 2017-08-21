@@ -60,8 +60,10 @@ wsServer.on('request', request => {
                 connections.push(connection);
             }
             else if (connection.auth) {
-                console.log(`${require('./module/getTime.js')('full')} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
+                //console.log(`${require('./module/getTime.js')('full')} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
                 reqreload('./command.js').command(connection, db, cmd);
+                delete require.cache[require.resolve('./module/command.js')];
+                return;
             }
             else {
                 connection.sendUTF("Request_JSON_Password");

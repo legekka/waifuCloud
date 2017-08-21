@@ -15,10 +15,10 @@ module.exports = {
                     "response": db.length
                 }
                 connection.sendUTF(JSON.stringify(resp));
+                return;
             }
                 break;
             case 'add_post': {
-                console.log(cmd.post);
                 var errormsg = isValidPost(cmd.post, db);
                 var resp;
                 if (errormsg != 'no error') {
@@ -28,6 +28,7 @@ module.exports = {
                         "response": errormsg
                     }
                     connection.sendUTF(JSON.stringify(resp));
+                    return;
                 } else {
                     addPost(cmd.post, db, () => {
                         resp = {
@@ -38,7 +39,8 @@ module.exports = {
                         connection.sendUTF(JSON.stringify(resp));
                     });
                 }
-                console.log(resp);
+                //console.log(resp);
+                return;
             }
                 break;
             case 'save': {
@@ -49,6 +51,7 @@ module.exports = {
                     "response": "Database saved."
                 }
                 connection.sendUTF(JSON.stringify(resp));
+                return;
             }
                 break;
             case 'search_filepath': {
@@ -72,9 +75,9 @@ module.exports = {
                 } else if (cmd.mode == 'one_file') {
                     // később
                 }
-
-                break;
+                return;
             }
+            break;
             case 'search_tags': {
                 if (cmd.mode == "random") {
                     var result = randomPost(cmd.tags, db);
@@ -86,8 +89,9 @@ module.exports = {
                     }
                     connection.sendUTF(JSON.stringify(resp));
                 }
-                break;
+                return;
             }
+                break;
             case 'stats': {
                 dbStatus(db, (response) => {
                     var resp = {
@@ -97,8 +101,9 @@ module.exports = {
                     }
                     connection.sendUTF(JSON.stringify(resp));
                 });
-                break;
+                return;
             }
+                break;
         }
     }
 }
@@ -190,20 +195,21 @@ function isValidPost(postreq, db) {
 function addPost(postreq, db, callback) {
     var post = {
         id: db.length,
-        url: postreq.url, 
+        url: postreq.url,
         tags: postreq.tags,
         filename: postreq.filename,
         filepath: postreq.filepath != undefined ? postreq.filepath : '',
-        fileurl: postreq.filepath != undefined ? postreq.filepath.replace("d:/waifucloud/images","http://boltzmann.cf/images") : ''
+        fileurl: postreq.filepath != undefined ? postreq.filepath.replace("d:/waifucloud/images", "http://boltzmann.cf/images") : ''
     }
     db.push(post);
     return callback();
 }
 
 
-var imagelist = [];
 
-function buildImagePathDb() {
+
+function buildImagePathDb(callback) {
+    var imagelist = [];
     if (imagelist.length == 0) {
         var imagefolderlist = fs.readdirSync(config.imagepath);
     }
@@ -213,28 +219,29 @@ function buildImagePathDb() {
             imagelist.push(config.imagepath + imagefolderlist[i] + '/' + list[j]);
         }
     }
-    console.log(imagelist);
+    return callback(imagelist);
 }
 
 function findAllMissingPath(db) {
     var errorlist = [];
-    buildImagePathDb();
-    for (i in db) {
-        if (db[i].filepath == "") {
-            var filepath = fileLocation(db[i].filename);
-            if (filepath == 'error') {
-                errorlist.push({
-                    "id": db[i].id,
-                    "error": "Filepath not found for filename.",
-                    "filename": db[i].filename
-                });
-            } else {
-                db[i].filepath = filepath;
-                db[i].fileurl = filepath.replace("d:/waifucloud/images","http://boltzmann.cf/images");
+    buildImagePathDb((imagelist) => {
+        for (i in db) {
+            if (db[i].filepath == "") {
+                var filepath = fileLocation(db[i].filename);
+                if (filepath == 'error') {
+                    errorlist.push({
+                        "id": db[i].id,
+                        "error": "Filepath not found for filename.",
+                        "filename": db[i].filename
+                    });
+                } else {
+                    db[i].filepath = filepath;
+                    db[i].fileurl = filepath.replace("d:/waifucloud/images", "http://boltzmann.cf/images");
+                }
             }
         }
-    }
-    return errorlist.length != 0 ? errorlist : "no error";
+        return errorlist.length != 0 ? errorlist : "no error";
+    });
 }
 
 
