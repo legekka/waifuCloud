@@ -5,8 +5,11 @@ var fs = require('fs');
 var http = require('http');
 var WebSocketServer = require('websocket').server;
 var reqreload = require('./module/reqreload.js');
-
+var decache = require('decache');
 var config = JSON.parse(fs.readFileSync('./config.json').toString());
+var exec = require('child_process').exec;
+
+reqreload('./memwatch.js').start();
 
 console.log('Loading database...');
 var db = JSON.parse(fs.readFileSync(config.databasepath).toString());
@@ -41,7 +44,7 @@ wsServer.on('request', request => {
 
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
-            var cmd;
+            let cmd;
             try {
                 cmd = JSON.parse(message.utf8Data.toString().trim());
             }
@@ -58,12 +61,13 @@ wsServer.on('request', request => {
                 connection.username = cmd.username;
                 console.log(`${require('./module/getTime.js')('full')} ${cmd.username} connected (ConnectionID: ${connection.id})`);
                 connections.push(connection);
+                connection.sendUTF("JSON_Password_Accepted");
             }
             else if (connection.auth) {
                 //console.log(`${require('./module/getTime.js')('full')} ${connection.username}[${connection.id})]: ` + message.utf8Data.toString());
-                reqreload('./command.js').command(connection, db, cmd);
-                delete require.cache[require.resolve('./module/command.js')];
-                return;
+                reqreload('./commands.js').command(connection, db, cmd, () => {
+                    decache('./module/command.js');
+                });
             }
             else {
                 connection.sendUTF("Request_JSON_Password");
