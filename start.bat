@@ -1,5 +1,5 @@
 @Echo off
 title waifucloud
 :start
-node index.js --no-warnings
+node waifu.js --no-warnings
 if %ERRORLEVEL% NEQ 3 goto:start
