@@ -8,9 +8,10 @@ var reqreload = require('./module/reqreload.js');
 var decache = require('decache');
 var config = JSON.parse(fs.readFileSync('./config.json').toString());
 var exec = require('child_process').exec;
+var md5 = require('md5');
 
 var memwatch = {
-    limit: 500,
+    limit: 2048,
     start: () => {
         setInterval(() => {
             var memrss = process.memoryUsage().rss;
@@ -24,26 +25,40 @@ var memwatch = {
 }
 var autosave = {
     autosave: (db, config) => {
-        let db2 = JSON.parse(fs.readFileSync(config.databasepath).toString());
-        if (db != db2) {
-            fs.writeFileSync(config.databasepath, JSON.stringify(db));
-            fs.writeFileSync('../db-backup/' + reqreload('./getTime.js')('stamp') + ".json", JSON.stringify(db));
+        console.log('Generating md5 sum...');
+        let stringdb = JSON.stringify(db);
+        let md5sum = md5(stringdb);
+        console.log('Complete: ' + md5sum);
+        if (md5sum != fs.readFileSync(config.md5path).toString().trim()) {
+            console.log('md5 mismatch, saving changes...');
+            fs.writeFileSync(config.md5path, md5sum);
+            fs.writeFileSync(config.databasepath, stringdb);
+            fs.writeFileSync('../db-backup/' + reqreload('./getTime.js')('stamp') + ".json", stringdb);
             console.log('Autosave complete!');
         } else {
-            console.log('No changes detected. Skipping save...');
+            console.log('No changes since the last autosave.');
         }
+        stringdb = undefined;
     },
     save: (db, config) => {
-        fs.writeFileSync(config.databasepath, JSON.stringify(db));
-        fs.writeFileSync('../db-backup/' + reqreload('./getTime.js')('stamp') + ".json", JSON.stringify(db));
+        console.log('Generating md5 sum...');
+        let stringdb = JSON.stringify(db);
+        let md5sum = md5(stringdb);
+        console.log('Complete: ' + md5sum);
+        fs.writeFileSync(config.md5path, md5sum);
+        fs.writeFileSync(config.databasepath, stringdb);
+        fs.writeFileSync('../db-backup/' + reqreload('./getTime.js')('stamp') + ".json", stringdb);
+        stringdb = undefined;
     }
 
 }
 var commands = {
     command: (connection, db, cmd) => {
+        console.log('[request] ' + connection.username);
+        console.log(cmd);
         switch (cmd.name) {
             case 'data_count': {
-                let resp = {
+                var resp = {
                     "job_id": cmd.job_id,
                     "error": false,
                     "response": db.length
@@ -53,14 +68,16 @@ var commands = {
             }
                 break;
             case 'add_post': {
-                let errormsg = commands.isValidPost(cmd.post, db);
-                let resp;
+                var errormsg = commands.isValidPost(cmd.post, db);
+                var resp;
                 if (errormsg != 'no error') {
                     resp = {
                         "job_id": cmd.job_id,
                         "error": true,
                         "response": errormsg
                     }
+                    if (resp.error)
+                        console.log(resp);
                     connection.sendUTF(JSON.stringify(resp));
                 } else {
                     commands.addPost(cmd.post, db, () => {
@@ -78,12 +95,13 @@ var commands = {
                 break;
             case 'del_post': {
                 commands.delPost(cmd.id, db, (err, post) => {
-                    let resp = {
+                    var resp = {
                         "job_id": cmd.job_id,
                         "error": err != 'no error',
                         "response": err == 'no error' ? post : err
                     }
-                    console.log(resp);
+                    if (resp.error)
+                        console.log(resp);
                     connection.sendUTF(JSON.stringify(resp));
                 });
                 return
@@ -91,7 +109,7 @@ var commands = {
                 break;
             case 'save': {
                 autosave.save(db, config);
-                let resp = {
+                var resp = {
                     "job_id": cmd.job_id,
                     "error": false,
                     "response": "Database saved."
@@ -102,21 +120,30 @@ var commands = {
                 break;
             case 'search_filepath': {
                 if (cmd.mode == 'all') {
-                    let result = commands.findAllMissingPath(db);
+                    var result = commands.findAllMissingPath(db);
+                    console.log(result);
                     if (result == "no error") {
-                        let resp = {
+                        var resp = {
                             "job_id": cmd.job_id,
                             "error": false,
                             "response": "All filepaths have found."
                         }
                         connection.sendUTF(JSON.stringify(resp));
                     } else {
-                        let resp = {
+                        /*var resp = {
                             "job_id": cmd.job_id,
                             "error": true,
                             "response": result
                         }
-                        connection.sendUTF(JSON.stringify(resp));
+                        if (resp.error)
+                            console.log(resp);
+                        connection.sendUTF(JSON.stringify(resp));*/
+                        for (i in result) {
+                            var resp = result[i];
+                            resp.job_id = cmd.job_id;
+                            connection.sendUTF(JSON.stringify(resp));
+                        }
+                        console.log(`${result.length} filepath missing.`);
                     }
                 } else if (cmd.mode == 'one_file') {
                     // később
@@ -127,20 +154,35 @@ var commands = {
             case 'search_tags': {
                 if (cmd.mode == "random") {
                     var result = commands.randomPost(cmd.tags, db);
-                    let resp = {
+                    var resp = {
                         "job_id": cmd.job_id,
                         "name": 'post',
                         "error": result == "no post",
                         "response": result
                     };
+                    if (resp.error)
+                        console.log(resp);
                     connection.sendUTF(JSON.stringify(resp));
                 }
                 return
             }
                 break;
+            case 'search_id': {
+                var result = commands.idPost(cmd.id, db);
+                var resp = {
+                    "job_id": cmd.job_id,
+                    "name": 'post',
+                    "error": result == "no post",
+                    "response": result
+                }
+                if (resp.error)
+                    console.log(resp);
+                connection.sendUTF(JSON.stringify(resp));
+            }
+                break;
             case 'stats': {
                 commands.dbStatus(db, (response) => {
-                    let resp = {
+                    var resp = {
                         'job_id': cmd.job_id,
                         'name': 'stats',
                         'response': response
@@ -154,19 +196,25 @@ var commands = {
         return
     },
 
-
+    idPost: (id, db) => {
+        if (db[id] != undefined) {
+            return db[id];
+        } else {
+            return "no post";
+        }
+    },
 
     ver: (callback) => {
         lastcomm = exec('git log -n 1');
         lastcomm.stdout.on('data', (data) => {
-            let title = data.toString().split('\n')[4].trim();
+            var title = data.toString().split('\n')[4].trim();
             lastcomm.kill();
             return callback(title);
         });
     },
 
     getSize: (db) => {
-        let size = 0;
+        var size = 0;
         for (i in db) {
             if (db[i].size != '') {
                 size += db[i].size;
@@ -176,19 +224,19 @@ var commands = {
     },
 
     dbStatus: (db, callback) => {
-        let filepath_count = 0;
-        let size = commands.getSize(db);
-        let gb = size / 1024 / 1024 / 1024;
-        let gbtext = gb.toFixed(2);
+        var filepath_count = 0;
+        var size = commands.getSize(db);
+        var gb = size / 1024 / 1024 / 1024;
+        var gbtext = gb.toFixed(2);
         for (i in db) {
             if (db[i].filepath != '') {
                 filepath_count++;
             }
         }
         commands.ver((version) => {
-            let memrss = process.memoryUsage().rss;
+            var memrss = process.memoryUsage().rss;
             memrss = (memrss / 1024 / 1024).toFixed(2);
-            let stat = {
+            var stat = {
                 'name': 'WaifuCloud',
                 'version': version,
                 'git': 'http://github.com/legekka/waifuCloud',
@@ -204,7 +252,7 @@ var commands = {
     },
 
     randomPost: (tags, db) => {
-        let results = commands.searchTags(tags, db);
+        var results = commands.searchTags(tags, db);
         if (results.length > 0) {
             if (results.length > 1) {
                 var rng = Math.min(Math.round(Math.random() * results.length), results.length - 1);
@@ -216,14 +264,13 @@ var commands = {
     },
 
     searchTags: (tags, db) => {
-        let results = [];
-        console.log(tags);
+        var results = [];
         for (i in db) {
             if (db[i].filepath != '') {
-                let j = 0;
-                let count = 0;
+                var j = 0;
+                var count = 0;
                 while (j < tags.length && count != tags.length) {
-                    let k = 0;
+                    var k = 0;
                     while (k < db[i].tags.length && tags[j].toLowerCase() !== db[i].tags[k].toLowerCase()) {
                         k++;
                     }
@@ -244,7 +291,7 @@ var commands = {
     isValidPost: (postreq, db) => {
         if (postreq.url != undefined && postreq.tags != undefined) {
             if (postreq.filename != undefined) {
-                let i = 0;
+                var i = 0;
                 while (i < db.length && db[i].filename != postreq.filename) { i++ }
                 if (i >= db.length) { return "no error" }
                 else { return "Error: Filename already exists" }
@@ -253,19 +300,19 @@ var commands = {
     },
 
     addPost: (postreq, db, callback) => {
-        var path = postreq.filepath;
+        var path = postreq.filepath.toLowerCase();
         if (path) {
             path = path.toLowerCase();
             while (path.indexOf('\\') >= 0)
                 path = path.replace("\\", "/");
         }
-        let post = {
-            id: db.length,
+        var post = {
+            id: db[db.length - 1].id + 1,
             url: postreq.url,
             tags: postreq.tags,
             filename: postreq.filename,
             filepath: path != undefined ? path : '',
-            fileurl: path != undefined ? path.replace("d:/waifucloud/images", "http://boltzmann.cf/images") : '',
+            fileurl: path != undefined ? path.replace("d:/waifucloud/images", "http://boltzmann.cf:7007/images") : '',
             size: path != undefined ? fs.statSync(path).size : ''
         }
         db.push(post);
@@ -274,7 +321,7 @@ var commands = {
     },
 
     delPost: (id, db, callback) => {
-        let i = 0;
+        var i = 0;
         while (i < db.length && db[i].id != id) { i++; }
         if (i < db.length) {
             db.splice(i, 1);
@@ -286,14 +333,18 @@ var commands = {
 
 
 
-    buildImagePathDb: (callback) => {
-        let imagelist = [];
-        let imagefolderlist;
+    buildImagePathDb: () => {
+        var imagelist = [];
+        var imagefolderlist;
         if (imagelist.length == 0) {
             imagefolderlist = fs.readdirSync(config.imagepath);
         }
+        if (imagefolderlist.indexOf('web.config')) {
+            imagefolderlist.splice(imagefolderlist.indexOf('web.config'));
+        }
+
         for (i in imagefolderlist) {
-            let list = fs.readdirSync(config.imagepath + imagefolderlist[i]);
+            var list = fs.readdirSync(config.imagepath + imagefolderlist[i]);
             for (j in list) {
                 imagelist.push(config.imagepath + imagefolderlist[i] + '/' + list[j]);
             }
@@ -301,44 +352,44 @@ var commands = {
         }
         imagefolderlist = undefined;
 
-        return callback(imagelist);
+        return imagelist;
     },
 
     findAllMissingPath: (db) => {
-        let errorlist = [];
-        commands.buildImagePathDb((imagelist) => {
-            for (i in db) {
-                if (db[i].filepath == "") {
-                    let filepath = commands.fileLocation(db[i].filename, imagelist);
-                    if (filepath == 'error') {
-                        errorlist.push({
-                            "id": db[i].id,
-                            "error": "Filepath not found for filename.",
-                            "filename": db[i].filename
-                        });
-                    } else {
-                        db[i].filepath = filepath;
-                        db[i].fileurl = filepath.replace("d:/waifucloud/images", "http://boltzmann.cf/images");
-                        db[i].size = fs.statSync(filepath).size;
-                    }
-                    filepath = undefined;
-                }
+        var errorlist = [];
+        var imagelist = commands.buildImagePathDb();
+        for (i in db) {
+            //          if (db[i].filepath == "") {
+            var filepath = commands.fileLocation(db[i].filename, imagelist);
+            if (filepath == 'error') {
+                errorlist.push({
+                    "id": db[i].id,
+                    "error": true,
+                    "result": "Filepath not found for filename.",
+                    "filename": db[i].filename
+                });
+            } else {
+                db[i].filepath = filepath;
+                db[i].fileurl = filepath.replace("d:/waifucloud/images", "http://boltzmann.cf/images");
+                //db[i].size = fs.statSync(filepath).size;
             }
-            return errorlist.length != 0 ? errorlist : "no error";
-        });
+            //          }
+        }
+        return errorlist.length != 0 ? errorlist : "no error";
+
     },
 
     fileLocation: (filename, imagelist) => {
-        let i = 0;
+        var i = 0;
         while (i < imagelist.length && imagelist[i].split('/')[imagelist[i].split('/').length - 1].indexOf(filename) < 0) { i++ }
         if (i < imagelist.length) { return imagelist[i]; }
         else { return "error"; }
     },
 
     format: (seconds) => {
-        let hours = Math.floor(seconds / (60 * 60));
-        let minutes = Math.floor(seconds % (60 * 60) / 60);
-        let secs = Math.floor(seconds % 60);
+        var hours = Math.floor(seconds / (60 * 60));
+        var minutes = Math.floor(seconds % (60 * 60) / 60);
+        var secs = Math.floor(seconds % 60);
 
         return commands.pad(hours) + ':' + commands.pad(minutes) + ':' + commands.pad(secs);
     },
@@ -351,12 +402,12 @@ memwatch.start();
 
 console.log('Loading database...');
 var db = JSON.parse(fs.readFileSync(config.databasepath).toString());
-var autosave = setInterval(() => {
+var auto = setInterval(() => {
     console.log('Autosaving database...');
     autosave.autosave(db, config);
 }, 3600000);
 
-console.log('Loading complete!');
+console.log('Loading compvare!');
 
 
 var server = http.createServer(function (request, response) {
@@ -381,7 +432,7 @@ wsServer.on('request', request => {
 
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
-            let cmd;
+            var cmd;
             try {
                 cmd = JSON.parse(message.utf8Data.toString().trim());
             }
