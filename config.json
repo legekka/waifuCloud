@@ -2,6 +2,7 @@
     "port": 4243,
     "password": "./password.txt",
     "databasepath": "./db.json",
+    "tempdatabasepath": "./temp.json",
     "md5path": "./md5.txt",
     "imagepath": "D:/waifucloud/images/"
 }

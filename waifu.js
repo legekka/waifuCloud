@@ -8,7 +8,7 @@ var reqreload = require('./module/reqreload.js');
 var decache = require('decache');
 var config = JSON.parse(fs.readFileSync('./config.json').toString());
 var exec = require('child_process').exec;
-var md5 = require('md5');
+var md5 = require('md5-file/promise');
 
 var memwatch = {
     limit: 2048,
@@ -26,29 +26,66 @@ var memwatch = {
 var autosave = {
     autosave: (db, config) => {
         console.log('Generating md5 sum...');
-        let stringdb = JSON.stringify(db);
-        let md5sum = md5(stringdb);
-        console.log('Complete: ' + md5sum);
-        if (md5sum != fs.readFileSync(config.md5path).toString().trim()) {
-            console.log('md5 mismatch, saving changes...');
-            fs.writeFileSync(config.md5path, md5sum);
-            fs.writeFileSync(config.databasepath, stringdb);
-            fs.writeFileSync('../db-backup/' + reqreload('./getTime.js')('stamp') + ".json", stringdb);
-            console.log('Autosave complete!');
-        } else {
-            console.log('No changes since the last autosave.');
-        }
-        stringdb = undefined;
+        var stringdb = JSON.stringify(db);
+        fs.writeFile(config.tempdatabasepath, stringdb, (err) => {
+            if (err) {
+                throw err;
+            }
+            md5(config.tempdatabasepath).then(md5sum => {
+                fs.unlink(config.tempdatabasepath, (err) => {if (err) {throw err;}});
+                console.log('Complete: ' + md5sum);
+                fs.writeFileSync(config.md5path, md5sum);
+                if (md5sum != fs.readFileSync(config.md5path).toString().trim()) {
+                    console.log('md5 mismatch, saving changes...');
+                    fs.writeFile(config.md5path, md5sum, (err) => {if (err) {throw err;}});
+                    fs.writeFile(config.databasepath, stringdb, (err) => {
+                        if (err) {
+                            console.log(err.message);
+                        } else {
+                            console.log("db.json saved.");
+                        }
+                    });
+                    fs.writeFile('../db-backup/' + reqreload('./getTime.js')('stamp') + ".json", stringdb, (err) => {
+                        if (err) {
+                            console.log(err.message);
+                        } else {
+                            console.log("Backup file saved.");
+                        }
+                    });
+                } else {
+                    console.log('No changes since the last autosave.');
+                }
+            })
+        });
+
     },
     save: (db, config) => {
         console.log('Generating md5 sum...');
-        let stringdb = JSON.stringify(db);
-        let md5sum = md5(stringdb);
-        console.log('Complete: ' + md5sum);
-        fs.writeFileSync(config.md5path, md5sum);
-        fs.writeFileSync(config.databasepath, stringdb);
-        fs.writeFileSync('../db-backup/' + reqreload('./getTime.js')('stamp') + ".json", stringdb);
-        stringdb = undefined;
+        var stringdb = JSON.stringify(db);
+        fs.writeFile(config.tempdatabasepath, stringdb, (err) => {
+            if (err) {
+                throw err;
+            }
+            md5(config.tempdatabasepath).then(md5sum => {
+                fs.unlink(config.tempdatabasepath, (err) => {if (err) {throw err;}});
+                console.log('Complete: ' + md5sum);
+                fs.writeFile(config.md5path, md5sum, (err) => {if (err) {throw err;}});
+                fs.writeFile(config.databasepath, stringdb, (err) => {
+                    if (err) {
+                        console.log(err.message);
+                    } else {
+                        console.log("db.json saved.");
+                    }
+                });
+                fs.writeFile('../db-backup/' + reqreload('./getTime.js')('stamp') + ".json", stringdb, (err) => {
+                    if (err) {
+                        console.log(err.message);
+                    } else {
+                        console.log("Backup file saved.");
+                    }
+                });
+            })
+        });
     }
 
 }
