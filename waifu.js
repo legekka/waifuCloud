@@ -32,12 +32,12 @@ var autosave = {
                 throw err;
             }
             md5(config.tempdatabasepath).then(md5sum => {
-                fs.unlink(config.tempdatabasepath, (err) => {if (err) {throw err;}});
+                fs.unlink(config.tempdatabasepath, (err) => { if (err) { throw err; } });
                 console.log('Complete: ' + md5sum);
                 fs.writeFileSync(config.md5path, md5sum);
                 if (md5sum != fs.readFileSync(config.md5path).toString().trim()) {
                     console.log('md5 mismatch, saving changes...');
-                    fs.writeFile(config.md5path, md5sum, (err) => {if (err) {throw err;}});
+                    fs.writeFile(config.md5path, md5sum, (err) => { if (err) { throw err; } });
                     fs.writeFile(config.databasepath, stringdb, (err) => {
                         if (err) {
                             console.log(err.message);
@@ -67,9 +67,9 @@ var autosave = {
                 throw err;
             }
             md5(config.tempdatabasepath).then(md5sum => {
-                fs.unlink(config.tempdatabasepath, (err) => {if (err) {throw err;}});
+                fs.unlink(config.tempdatabasepath, (err) => { if (err) { throw err; } });
                 console.log('Complete: ' + md5sum);
-                fs.writeFile(config.md5path, md5sum, (err) => {if (err) {throw err;}});
+                fs.writeFile(config.md5path, md5sum, (err) => { if (err) { throw err; } });
                 fs.writeFile(config.databasepath, stringdb, (err) => {
                     if (err) {
                         console.log(err.message);
@@ -200,6 +200,17 @@ var commands = {
                     if (resp.error)
                         console.log(resp);
                     connection.sendUTF(JSON.stringify(resp));
+                } else if (cmd.mode = "list") {
+                    var result = commands.listPost(cmd.tags, db);
+                    var resp = {
+                        "job_id": cmd.job_id,
+                        "name": 'postlist',
+                        "error": result == "no post",
+                        "response": result
+                    }
+                    if (resp.error)
+                        console.log(resp);
+                    connection.sendUTF(JSON.stringify(resp));
                 }
                 return
             }
@@ -286,6 +297,20 @@ var commands = {
             }
             return callback(stat);
         });
+    },
+
+    listPost: (tags, db) => {
+        var resultlist = commands.searchTags(tags, db);
+        if (resultlist.length > 0) {
+            var idList = [];
+            resultlist.forEach((v, i, a) => {
+                idList.push(v.id);
+            })
+            return idList;
+        } else {
+            return "no post";
+        }
+
     },
 
     randomPost: (tags, db) => {
